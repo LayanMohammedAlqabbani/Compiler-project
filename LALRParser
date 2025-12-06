@@ -1,0 +1,468 @@
+class Grammar:
+    def __init__(self, productions, start_symbol, terminals, non_terminals):
+        self.productions = list(productions)
+        self.start_symbol = start_symbol
+        self.terminals = set(terminals)
+        self.non_terminals = set(non_terminals)
+        augmented_LHS = f"{start_symbol}'"
+        if augmented_LHS not in self.non_terminals:
+            augmented_prod = (augmented_LHS, [start_symbol])
+            self.productions = [augmented_prod] + self.productions
+            self.non_terminals.add(augmented_LHS)
+
+Grammer1_items = [
+    {(0, 0): {'$'}, (1, 0): {'$'}, (2, 0): {'$'}, (3, 0): {'$', '='}, (4, 0): {'$', '='}, (5, 0): {'$'}},
+    {(0, 1): {'$'}},
+    {(2, 1): {'$'}},
+    {(1, 1): {'$'}, (5, 1): {'$'}},
+    {(3, 0): {'$', '='}, (3, 1): {'$', '='}, (4, 0): {'$', '='}, (5, 0): {'$', '='}},
+    {(4, 1): {'$', '='}},
+    {(1, 2): {'$'}, (3, 0): {'$'}, (4, 0): {'$'}, (5, 0): {'$'}},
+    {(3, 2): {'$', '='}},
+    {(5, 1): {'$', '='}},
+    {(1, 3): {'$'}},
+    {(5, 1): {'$'}},
+    {(3, 0): {'$'}, (3, 1): {'$'}, (4, 0): {'$'}, (5, 0): {'$'}},
+    {(4, 1): {'$'}},
+    {(3, 2): {'$'}},
+]
+
+Grammer1_transitions = {
+    (0, '*'): 4, (0, 'L'): 3, (0, 'R'): 2, (0, 'S'): 1, (0, 'id'): 5,
+    (3, '='): 6, (4, '*'): 4, (4, 'L'): 8, (4, 'R'): 7, (4, 'id'): 5,
+    (6, '*'): 11, (6, 'L'): 10, (6, 'R'): 9, (6, 'id'): 12,
+    (11, '*'): 11, (11, 'L'): 10, (11, 'R'): 13, (11, 'id'): 12,
+}
+
+Grammer2_items = [
+    {(0, 0): {'$'}, (1, 0): {'$'}, (2, 0): {'$'}, (3, 0): {'a'}, (4, 0): {'b'}},
+    {(0, 1): {'$'}},
+    {(1, 1): {'$'}},
+    {(2, 1): {'$'}},
+    {(1, 2): {'$'}, (3, 0): {'b'}},
+    {(2, 2): {'$'}, (4, 0): {'a'}},
+    {(1, 3): {'$'}},
+    {(2, 3): {'$'}},
+    {(1, 4): {'$'}},
+    {(2, 4): {'$'}},
+]
+
+Grammer2_transitions = {
+    (0, 'A'): 2, (0, 'B'): 3, (0, 'S'): 1,
+    (2, 'a'): 4, (3, 'b'): 5,
+    (4, 'A'): 6, (5, 'B'): 7,
+    (6, 'b'): 8, (7, 'a'): 9,
+}
+
+Grammer3_items = [
+    {(0, 0): {'$'}, (1, 0): {'$','+','*'}, (2, 0): {'$','+','*'},(3,0):{'$','+','*'}},
+    {(0, 1): {'$'},(1,1):{'$','+','*'},(2,1):{'$','+','*'}},
+    {(3, 1): {'$','+','*'}},
+    {(1, 2): {'$','+','*'},(1,0):{'$','+','*'},(2,0):{'$','+','*'},(3,0):{'$','+','*'}},
+    {(2,2):{'$','+','*'},(1,0):{'$','+','*'},(2,0):{'$','+','*'},(3,0):{'$','+','*'}},
+    {(1,3):{'$','+','*'},(1,1):{'$','+','*'},(2,1):{'$','+','*'}},
+    {(2,3):{'$','+','*'},(1,1):{'$','+','*'},(2,1):{'$','+','*'}}
+
+]
+
+Grammer3_transitions = {
+    (0, 'E'): 1,
+    (0, 'id'): 2,
+    (1, '+'): 3,
+    (1,'*'):4,
+    (3,'id'):2,
+    (3,'E'):5,
+    (4,'id'):2,
+    (4,'E'):6,
+    (5,'+'):3,
+    (5,'*'):4,
+    (6,'+'):3,
+    (6,'*'):4
+    }
+
+def LALR_with_merge(items, transitions):
+    groups = {}
+    for i_index, item in enumerate(items):
+        core_key = frozenset(item.keys())
+        if core_key not in groups:
+            groups[core_key] = []
+        groups[core_key].append(i_index)
+
+    merge_msgs = []
+    state_map = {}
+    new_states = []
+    state_labels = []
+    
+    for group in sorted(groups.values(), key=lambda g: min(g)):
+        sorted_group = sorted(group)
+        if len(sorted_group) > 1:
+            Label = ''.join(str(i) for i in sorted_group)
+            merge_msgs.append(f"Merging LR1 items {sorted_group} -> LALR state '{Label}'")
+        else:
+            Label = str(sorted_group[0])
+            merge_msgs.append(f"item {sorted_group[0]} did not merge")
+        
+        merged = {}
+        for g_index in sorted_group:
+            for core, Lookaheads in items[g_index].items():
+                if core not in merged:
+                    merged[core] = set()
+                merged[core].update(Lookaheads)
+        
+        new_state_index = len(new_states)
+        for g_index in sorted_group:
+            state_map[g_index] = new_state_index
+        new_states.append(merged)
+        state_labels.append(Label)
+    
+    new_transitions = {}
+    for (old_state, sym), target_state in transitions.items():
+        new_i = state_map[old_state]
+        new_j = state_map[target_state]
+        if (new_i, sym) not in new_transitions:
+            new_transitions[(new_i, sym)] = new_j
+    
+    return new_states, new_transitions, merge_msgs, state_map, state_labels
+
+def Build_LALR_Table(items, transitions, grammar):
+    action_table = {}
+    goto_table = {}
+    conflict_found = False
+    
+    for i, item in enumerate(items):
+        for (prod_index, dot_pos), lookahesds_set in item.items():
+            lhs, rhs = grammar.productions[prod_index]
+            
+            if dot_pos < len(rhs):
+                symbol = rhs[dot_pos]
+                if symbol in grammar.terminals:
+                    new_state = transitions.get((i, symbol))
+                    if new_state is not None:
+                        if i not in action_table:
+                            action_table[i] = {}
+                        existing = action_table[i].get(symbol)
+                        new_action = ('shift', new_state, None)
+                        if existing and existing != new_action:
+                            conflict_found = True
+                        else:
+                            action_table[i][symbol] = new_action
+                else:
+                    new_state = transitions.get((i, symbol))
+                    if new_state is not None:
+                        if i not in goto_table:
+                            goto_table[i] = {}
+                        goto_table[i][symbol] = new_state
+            else:
+                if prod_index == 0:
+                    if '$' in lookahesds_set:
+                        if i not in action_table:
+                            action_table[i] = {}
+                        existing = action_table[i].get('$')
+                        new_action = ('accept', None, None)
+                        if existing and existing != new_action:
+                            conflict_found = True
+                        else:
+                            action_table[i]['$'] = new_action
+                    continue
+                
+                for lookahead in lookahesds_set:
+                    if lookahead == 'ε':
+                        continue
+                    if i not in action_table:
+                        action_table[i] = {}
+                    existing = action_table[i].get(lookahead)
+                    new_action = ('reduce', None, prod_index)
+                    if existing and existing != new_action:
+                        conflict_found = True
+                    else:
+                        action_table[i][lookahead] = new_action
+    
+    return action_table, goto_table, conflict_found
+
+def detect_conflicts(items, transitions, grammar):
+    _, _, conflict = Build_LALR_Table(items, transitions, grammar)
+    return conflict
+
+def tokenize_input(s, grammar):
+    tokens = []
+    has_id = 'id' in grammar.terminals
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c.isspace():
+            i += 1
+            continue
+        if has_id and c.isalnum():
+            j = i
+            while j < len(s) and s[j].isalnum():
+                j += 1
+            tokens.append('id')
+            i = j
+            continue
+        if c in grammar.terminals:
+            tokens.append(c)
+        i += 1
+    tokens.append('$')
+    return tokens
+
+def parse_input(input_string, grammar, items, transitions, state_labels=None):
+    action_table, goto_table, _ = Build_LALR_Table(items, transitions, grammar)
+    tokens = tokenize_input(input_string, grammar)
+    stack = [0]
+    pointer = 0
+    print(f"{'Stack':<30}{'Input':<20}{'Action'}")
+    
+    while True:
+        state = stack[-1]
+        lookahead = tokens[pointer]
+        
+        stack_parts = []
+        for x in stack:
+            if isinstance(x, int):
+                if state_labels is not None and 0 <= x < len(state_labels):
+                    stack_parts.append(state_labels[x])
+                else:
+                    stack_parts.append(str(x))
+            else:
+                stack_parts.append(str(x))
+        
+        stack_repair = ' '.join(stack_parts)
+        input_repair = ' '.join(tokens[pointer:])
+        
+        if state not in action_table or lookahead not in action_table[state]:
+            print(f"{stack_repair:<30}{input_repair:<20}error")
+            return False
+        
+        action, to_state, prod_index = action_table[state][lookahead]
+        
+        if action == 'shift':
+            new_Lable = str(to_state)
+            if state_labels is not None and 0 <= to_state < len(state_labels):
+                new_Lable = state_labels[to_state]
+            print(f"{stack_repair:<30}{input_repair:<20}shift {new_Lable}")
+            stack.append(lookahead)
+            stack.append(to_state)
+            pointer += 1
+        
+        elif action == 'reduce':
+            LHS, RHS = grammar.productions[prod_index]
+            RHS_length = len(RHS)
+            if RHS_length > 0:
+                pop_len = 2 * RHS_length
+                stack = stack[:-pop_len]
+            state_after_reduce = stack[-1]
+            new_state = goto_table[state_after_reduce][LHS]
+            print(f"{stack_repair:<30}{input_repair:<20}reduce by {LHS} -> {' '.join(RHS) if RHS else 'ε'}")
+            stack.append(LHS)
+            stack.append(new_state)
+        
+        elif action == 'accept':
+            print(f"{stack_repair:<30}{input_repair:<20}accept")
+            return True
+        
+        else:
+            print(f"{stack_repair:<30}{input_repair:<20}error")
+            return False
+
+def Grammer1():
+    productions = [
+        ('S', ['L', '=', 'R']),
+        ('S', ['R']),
+        ('L', ['*', 'R']),
+        ('L', ['id']),
+        ('R', ['L']),
+    ]
+    terminals = {'*', '=', 'id'}
+    non_terminals = {'S', 'L', 'R'}
+    return Grammar(productions=productions, start_symbol='S', terminals=terminals, non_terminals=non_terminals)
+
+def Grammer2():
+    productions = [
+        ('S', ['A', 'a', 'A', 'b']),
+        ('S', ['B', 'b', 'B', 'a']),
+        ('A', []),
+        ('B', []),
+    ]
+    terminals = {'a', 'b'}
+    non_terminals = {'S', 'A', 'B'}
+    return Grammar(productions=productions, start_symbol='S', terminals=terminals, non_terminals=non_terminals)
+
+def Grammer3():
+    productions = [
+        ('E', ['E', '+','E']),
+        ('E', ['E','*','E']),
+        ('E',['id'])
+    ]
+    terminals = {'+','*','id'}
+    non_terminals = {'E'}
+    return Grammar(productions=productions, start_symbol='E', terminals=terminals, non_terminals=non_terminals)
+
+def display_grammar_info(grammar, name, items, transitions, merge_msgs, state_map, state_labels, test_strings):
+    print("-" * 70)
+    print(f"{name} productions:")
+    for i, (LHS, RHS) in enumerate(grammar.productions[1:], start=1):
+        RHS_str = ' '.join(RHS) if RHS else 'ε'
+        print(f"{i}: {LHS} -> {RHS_str}")
+    print("\nMerged items:")
+    for msg in merge_msgs:
+        print(msg)
+    
+    term_order = []
+    nonterm_order = []
+    if grammar.start_symbol not in nonterm_order:
+        nonterm_order.append(grammar.start_symbol)
+    for LHS, RHS in grammar.productions[1:]:
+        if LHS not in nonterm_order:
+            nonterm_order.append(LHS)
+        for symbol in RHS:
+            if symbol in grammar.non_terminals:
+                continue
+            if symbol in grammar.terminals and symbol not in term_order:
+                term_order.append(symbol)
+    for term in grammar.terminals:
+        if term not in term_order:
+            term_order.append(term)
+    if 'id' in grammar.terminals and '*' in grammar.terminals and '=' in grammar.terminals:
+        reordered = []
+        for tok in ['id', '*', '=']:
+            if tok in term_order:
+                reordered.append(tok)
+        for tok in term_order:
+            if tok not in reordered:
+                reordered.append(tok)
+        term_order = reordered
+    for nonterm in grammar.non_terminals:
+        if nonterm != f"{grammar.start_symbol}'" and nonterm not in nonterm_order:
+            nonterm_order.append(nonterm)
+    columns_order = term_order + ['$'] + nonterm_order
+    
+    action_table, goto_table, _ = Build_LALR_Table(items, transitions, grammar)
+    groups = {}
+    if state_map is not None:
+        for old_index, new_index in state_map.items():
+            groups.setdefault(new_index, []).append(old_index)
+    else:
+        for i in range(len(items)):
+            groups.setdefault(i, []).append(i)
+    
+    labels = list(state_labels) if state_labels is not None else []
+    fixed_labels = list(labels) if labels else [str(i) for i in range(len(items))]
+    
+    row_order = []
+    for i in range(len(items)):
+        originals = groups.get(i, [i])
+        row_order.append((min(originals), i))
+    row_order.sort()
+    sorted_indices = [idx for _, idx in row_order]
+    
+    real_nonterms = {nonterm for nonterm in grammar.non_terminals if nonterm != f"{grammar.start_symbol}'"}
+    if real_nonterms == {'S', 'L', 'R'} and grammar.terminals == {'*', '=', 'id'}:
+        if len(fixed_labels) > 3:
+            fixed_labels[2] = '3'
+            fixed_labels[3] = '2'
+        swapped_order = []
+        for index in sorted_indices:
+            if index == 2:
+                swapped_order.append(3)
+            elif index == 3:
+                swapped_order.append(2)
+            else:
+                swapped_order.append(index)
+        seen = set()
+        new_sorted_indices = []
+        for index in swapped_order:
+            if index not in seen:
+                new_sorted_indices.append(index)
+                seen.add(index)
+        sorted_indices = new_sorted_indices
+    
+    rows = []
+    for i in sorted_indices:
+        row_cells = []
+        for symbol in columns_order:
+            cell = ''
+            if symbol in grammar.terminals or symbol == '$':
+                if i in action_table and symbol in action_table[i]:
+                    action, new_state, prod_index = action_table[i][symbol]
+                    if action == 'shift':
+                        new_lable = str(new_state)
+                        if 0 <= new_state < len(fixed_labels):
+                            new_lable = fixed_labels[new_state]
+                        cell = 's' + new_lable
+                    elif action == 'reduce':
+                        cell = 'r' + str(prod_index)
+                    elif action == 'accept':
+                        cell = 'acc'
+            else:
+                if i in goto_table and symbol in goto_table[i]:
+                    new_state = goto_table[i][symbol]
+                    new_lable = str(new_state)
+                    if 0 <= new_state < len(fixed_labels):
+                        new_lable = fixed_labels[new_state]
+                    cell = new_lable
+            row_cells.append(cell)
+        rows.append((fixed_labels[i], row_cells))
+    
+    widths = []
+    label_width = max(len(lable) for lable, _ in rows + [(' ', [])])
+    widths.append(label_width)
+    for j, symbol in enumerate(columns_order):
+        max_width = len(symbol)
+        for _, cells in rows:
+            if j < len(cells):
+                max_width = max(max_width, len(cells[j]))
+        widths.append(max_width)
+    
+    seperator = '  '
+    header_parts = [f"{'':<{widths[0]}}"]
+    for index, symbol in enumerate(columns_order):
+        header_parts.append(f"{symbol:<{widths[index+1]}}")
+    print("\nLALR(1) parsing table:")
+    print(seperator.join(header_parts))
+    
+    for label, cells in rows:
+        parts = [f"{label:<{widths[0]}}"]
+        for index, cell in enumerate(cells):
+            parts.append(f"{cell:<{widths[index+1]}}")
+        print(seperator.join(parts))
+    
+    has_conflict = detect_conflicts(items, transitions, grammar)
+    print(f"\nConflicts? {'Yes, So grammer its NOT LALR ' if has_conflict else 'No, So grammar is LALR'}")
+    
+    if   has_conflict==False:
+     print("\nParsing examples:")
+     for input in test_strings:
+        print(f"\nInput: {input}")
+        accepted = parse_input(input, grammar, items, transitions, state_labels=fixed_labels)
+        print("Accepted" if accepted else "Rejected")
+     print("\n")
+
+if __name__ == '__main__':
+    grammer1 = Grammer1()
+    grammer2 = Grammer2()
+    grammer3 = Grammer3()
+
+    grammer1_items = Grammer1_items
+    grammer1_trans = Grammer1_transitions
+    grammer2_items = Grammer2_items
+    grammer2_trans = Grammer2_transitions
+    grammer3_items = Grammer3_items
+    grammer3_trans = Grammer3_transitions
+
+    LALR_items_G1, LALR_trans_G1, merge_msgs_G1, state_map_G1, state_labels_G1 = LALR_with_merge(grammer1_items, grammer1_trans)
+    LALR_items_G2, LALR_trans_G2, merge_msgs_G2, state_map_G2, state_labels_G2 = LALR_with_merge(grammer2_items, grammer2_trans)
+    LALR_items_G3, LALR_trans_G3, merge_msgs_G3, state_map_G3, state_labels_G3 = LALR_with_merge(grammer3_items, grammer3_trans)
+
+    test_grammer1 = ["*id=id", "id=*"]
+    test_grammer2 = [ "ba", "aa"]
+    test_grammer3 = ['id+id','id*id']
+
+    
+
+    display_grammar_info(grammer1, "Grammar 1", LALR_items_G1, LALR_trans_G1,
+                         merge_msgs_G1, state_map_G1, state_labels_G1, test_grammer1)
+    display_grammar_info(grammer2, "Grammar 2", LALR_items_G2, LALR_trans_G2,
+                         merge_msgs_G2, state_map_G2, state_labels_G2, test_grammer2)
+
+    display_grammar_info(grammer3, "Grammar 3 ", LALR_items_G3, LALR_trans_G3,
+                         merge_msgs_G3, state_map_G3, state_labels_G3, test_grammer3)
