@@ -101,38 +101,33 @@ def LALR_with_merge(items, transitions):
         else:
             Label = str(sorted_group[0])
             merge_msgs.append(f"item {sorted_group[0]} did not merge")
-        
         merged = {}
         for g_index in sorted_group:
             for core, Lookaheads in items[g_index].items():
                 if core not in merged:
                     merged[core] = set()
                 merged[core].update(Lookaheads)
-        
         new_state_index = len(new_states)
         for g_index in sorted_group:
             state_map[g_index] = new_state_index
         new_states.append(merged)
         state_labels.append(Label)
-    
     new_transitions = {}
     for (old_state, sym), target_state in transitions.items():
         new_i = state_map[old_state]
         new_j = state_map[target_state]
         if (new_i, sym) not in new_transitions:
             new_transitions[(new_i, sym)] = new_j
-    
     return new_states, new_transitions, merge_msgs, state_map, state_labels
 
-def Build_LALR_Table(items, transitions, grammar):
+def Build_LALR_Table(States, transitions, grammar):
     action_table = {}
     goto_table = {}
     conflict_found = False
     
-    for i, item in enumerate(items):
-        for (prod_index, dot_pos), lookahesds_set in item.items():
+    for i, state in enumerate(States):
+        for (prod_index, dot_pos), lookahesds_set in state.items():
             lhs, rhs = grammar.productions[prod_index]
-            
             if dot_pos < len(rhs):
                 symbol = rhs[dot_pos]
                 if symbol in grammar.terminals:
@@ -164,7 +159,6 @@ def Build_LALR_Table(items, transitions, grammar):
                         else:
                             action_table[i]['$'] = new_action
                     continue
-                
                 for lookahead in lookahesds_set:
                     if lookahead == 'ε':
                         continue
@@ -449,15 +443,18 @@ if __name__ == '__main__':
     grammer3_items = Grammer3_items
     grammer3_trans = Grammer3_transitions
 
-    LALR_items_G1, LALR_trans_G1, merge_msgs_G1, state_map_G1, state_labels_G1 = LALR_with_merge(grammer1_items, grammer1_trans)
-    LALR_items_G2, LALR_trans_G2, merge_msgs_G2, state_map_G2, state_labels_G2 = LALR_with_merge(grammer2_items, grammer2_trans)
-    LALR_items_G3, LALR_trans_G3, merge_msgs_G3, state_map_G3, state_labels_G3 = LALR_with_merge(grammer3_items, grammer3_trans)
+    LALR_items_G1, LALR_trans_G1, merge_msgs_G1, state_map_G1, state_labels_G1 = LALR_with_merge(
+        grammer1_items,grammer1_trans)
+    
+    LALR_items_G2, LALR_trans_G2, merge_msgs_G2, state_map_G2, state_labels_G2 = LALR_with_merge(
+        grammer2_items,grammer2_trans)
+    
+    LALR_items_G3, LALR_trans_G3, merge_msgs_G3, state_map_G3, state_labels_G3 = LALR_with_merge(
+        grammer3_items, grammer3_trans)
 
     test_grammer1 = ["*id=id", "id=*"]
     test_grammer2 = [ "ba", "aa"]
-    test_grammer3 = ['id+id','id*id']
-
-    
+    test_grammer3 = ['id+id','id*id']# actullay we didnt test these for Grammar 3 because the Grammar not LALR Grammer
 
     display_grammar_info(grammer1, "Grammar 1", LALR_items_G1, LALR_trans_G1,
                          merge_msgs_G1, state_map_G1, state_labels_G1, test_grammer1)
@@ -466,3 +463,4 @@ if __name__ == '__main__':
 
     display_grammar_info(grammer3, "Grammar 3 ", LALR_items_G3, LALR_trans_G3,
                          merge_msgs_G3, state_map_G3, state_labels_G3, test_grammer3)
+    
