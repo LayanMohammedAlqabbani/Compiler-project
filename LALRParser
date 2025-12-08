@@ -173,8 +173,8 @@ def Build_LALR_Table(States, transitions, grammar):
     
     return action_table, goto_table, conflict_found
 
-def detect_conflicts(items, transitions, grammar):
-    _, _, conflict = Build_LALR_Table(items, transitions, grammar)
+def detect_conflicts(states, transitions, grammar):
+    _, _, conflict = Build_LALR_Table(states, transitions, grammar)
     return conflict
 
 def tokenize_input(s, grammar):
@@ -199,8 +199,8 @@ def tokenize_input(s, grammar):
     tokens.append('$')
     return tokens
 
-def parse_input(input_string, grammar, items, transitions, state_labels=None):
-    action_table, goto_table, _ = Build_LALR_Table(items, transitions, grammar)
+def parse_input(input_string, grammar, states, transitions, state_labels=None):
+    action_table, goto_table, _ = Build_LALR_Table(states, transitions, grammar)
     tokens = tokenize_input(input_string, grammar)
     stack = [0]
     pointer = 0
@@ -291,7 +291,7 @@ def Grammer3():
     non_terminals = {'E'}
     return Grammar(productions=productions, start_symbol='E', terminals=terminals, non_terminals=non_terminals)
 
-def display_grammar_info(grammar, name, items, transitions, merge_msgs, state_map, state_labels, test_strings):
+def display_grammar_info(grammar, name, states, transitions, merge_msgs, state_map, state_labels, test_strings):
     print("-" * 70)
     print(f"{name} productions:")
     for i, (LHS, RHS) in enumerate(grammar.productions[1:], start=1):
@@ -330,20 +330,20 @@ def display_grammar_info(grammar, name, items, transitions, merge_msgs, state_ma
             nonterm_order.append(nonterm)
     columns_order = term_order + ['$'] + nonterm_order
     
-    action_table, goto_table, _ = Build_LALR_Table(items, transitions, grammar)
+    action_table, goto_table, _ = Build_LALR_Table(states, transitions, grammar)
     groups = {}
     if state_map is not None:
         for old_index, new_index in state_map.items():
             groups.setdefault(new_index, []).append(old_index)
     else:
-        for i in range(len(items)):
+        for i in range(len(states)):
             groups.setdefault(i, []).append(i)
     
     labels = list(state_labels) if state_labels is not None else []
-    fixed_labels = list(labels) if labels else [str(i) for i in range(len(items))]
+    fixed_labels = list(labels) if labels else [str(i) for i in range(len(states))]
     
     row_order = []
-    for i in range(len(items)):
+    for i in range(len(states)):
         originals = groups.get(i, [i])
         row_order.append((min(originals), i))
     row_order.sort()
@@ -420,14 +420,14 @@ def display_grammar_info(grammar, name, items, transitions, merge_msgs, state_ma
             parts.append(f"{cell:<{widths[index+1]}}")
         print(seperator.join(parts))
     
-    has_conflict = detect_conflicts(items, transitions, grammar)
+    has_conflict = detect_conflicts(states, transitions, grammar)
     print(f"\nConflicts? {'Yes, So grammer its NOT LALR ' if has_conflict else 'No, So grammar is LALR'}")
     
     if   has_conflict==False:
      print("\nParsing examples:")
      for input in test_strings:
         print(f"\nInput: {input}")
-        accepted = parse_input(input, grammar, items, transitions, state_labels=fixed_labels)
+        accepted = parse_input(input, grammar, states, transitions, state_labels=fixed_labels)
         print("Accepted" if accepted else "Rejected")
      print("\n")
 
