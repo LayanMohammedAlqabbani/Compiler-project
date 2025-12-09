@@ -290,7 +290,6 @@ def Grammer3():
     terminals = {'+','*','id'}
     non_terminals = {'E'}
     return Grammar(productions=productions, start_symbol='E', terminals=terminals, non_terminals=non_terminals)
-
 def display_grammar_info(grammar, name, states, transitions, merge_msgs, state_map, state_labels, test_strings):
     print("-" * 70)
     print(f"{name} productions:")
@@ -369,7 +368,16 @@ def display_grammar_info(grammar, name, states, transitions, merge_msgs, state_m
                 new_sorted_indices.append(index)
                 seen.add(index)
         sorted_indices = new_sorted_indices
-    
+
+    has_conflict = detect_conflicts(states, transitions, grammar)
+
+    if has_conflict:
+        print("\nGrammar is not LALR\n")
+        return  
+    else:
+        print("\nGrammar is LALR\n")
+
+    print("\nLALR parsing table:")
     rows = []
     for i in sorted_indices:
         row_cells = []
@@ -396,9 +404,9 @@ def display_grammar_info(grammar, name, states, transitions, merge_msgs, state_m
                     cell = new_lable
             row_cells.append(cell)
         rows.append((fixed_labels[i], row_cells))
-    
+
     widths = []
-    label_width = max(len(lable) for lable, _ in rows + [(' ', [])])
+    label_width = max(len(label) for label, _ in rows + [(' ', [])])
     widths.append(label_width)
     for j, symbol in enumerate(columns_order):
         max_width = len(symbol)
@@ -407,29 +415,25 @@ def display_grammar_info(grammar, name, states, transitions, merge_msgs, state_m
                 max_width = max(max_width, len(cells[j]))
         widths.append(max_width)
     
-    seperator = '  '
+    separator = '  '
     header_parts = [f"{'':<{widths[0]}}"]
     for index, symbol in enumerate(columns_order):
         header_parts.append(f"{symbol:<{widths[index+1]}}")
-    print("\nLALR(1) parsing table:")
-    print(seperator.join(header_parts))
+    print(separator.join(header_parts))
     
     for label, cells in rows:
         parts = [f"{label:<{widths[0]}}"]
         for index, cell in enumerate(cells):
             parts.append(f"{cell:<{widths[index+1]}}")
-        print(seperator.join(parts))
-    
-    has_conflict = detect_conflicts(states, transitions, grammar)
-    print(f"\nConflicts? {'Yes, So grammer its NOT LALR ' if has_conflict else 'No, So grammar is LALR'}")
-    
-    if   has_conflict==False:
-     print("\nParsing examples:")
-     for input in test_strings:
-        print(f"\nInput: {input}")
-        accepted = parse_input(input, grammar, states, transitions, state_labels=fixed_labels)
+        print(separator.join(parts))
+
+    print("\nParsing examples:")
+    for input_string in test_strings:
+        print(f"\nInput: {input_string}")
+        accepted = parse_input(input_string, grammar, states, transitions, state_labels=fixed_labels)
         print("Accepted" if accepted else "Rejected")
-     print("\n")
+    print("\n")
+
 
 if __name__ == '__main__':
     grammer1 = Grammer1()
@@ -463,4 +467,5 @@ if __name__ == '__main__':
 
     display_grammar_info(grammer3, "Grammar 3 ", LALR_items_G3, LALR_trans_G3,
                          merge_msgs_G3, state_map_G3, state_labels_G3, test_grammer3)
+    
     
