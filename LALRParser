@@ -375,7 +375,7 @@ def display_grammar_info(grammar, name, states, transitions, merge_msgs, state_m
         print("\nGrammar is not LALR\n")
         return  
     else:
-        print("\nGrammar is LALR\n")
+        print()
 
     print("\nLALR parsing table:")
     rows = []
@@ -419,6 +419,7 @@ def display_grammar_info(grammar, name, states, transitions, merge_msgs, state_m
     header_parts = [f"{'':<{widths[0]}}"]
     for index, symbol in enumerate(columns_order):
         header_parts.append(f"{symbol:<{widths[index+1]}}")
+
     print(separator.join(header_parts))
     
     for label, cells in rows:
@@ -426,7 +427,8 @@ def display_grammar_info(grammar, name, states, transitions, merge_msgs, state_m
         for index, cell in enumerate(cells):
             parts.append(f"{cell:<{widths[index+1]}}")
         print(separator.join(parts))
-
+        
+    print("\nGrammar is LALR\n")
     print("\nParsing examples:")
     for input_string in test_strings:
         print(f"\nInput: {input_string}")
